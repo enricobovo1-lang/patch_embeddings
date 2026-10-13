@@ -1,0 +1,12 @@
+# Install PyTorch separately first when CUDA support is desired; see README.
+torch==2.7.1
+torchvision==0.22.1
+transformers==4.52.4
+Pillow==11.2.1
+pillow-heif==1.8.0
+numpy==2.2.6
+PyYAML==6.0.2
+matplotlib==3.10.3
+pandas==2.2.3
+seaborn==0.13.2
+safetensors==0.5.3

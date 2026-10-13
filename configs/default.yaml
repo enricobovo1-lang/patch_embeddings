@@ -1,0 +1,31 @@
+model:
+  # Official Hugging Face DINOv2 checkpoint; ViT-S/14 has a 384-dimensional CLS embedding.
+  id: facebook/dinov2-small
+  cache_dir: models/huggingface
+device: auto # auto, cpu, or cuda
+batch_size: 16
+paths:
+  references: data/input/references
+  queries: data/input/queries
+  patches: data/wip/patches
+  feature_bank: data/wip/embeddings/feature_bank.npz
+  metadata: data/wip/embeddings/feature_bank_metadata.json
+  report: data/wip/embeddings/build_report.json
+  predictions: data/outputs/predictions
+  evaluations: data/outputs/evaluations
+components: [component_A, component_B, component_C]
+patches:
+  # Dimensions refer to the original reference image, before DINOv2 preprocessing.
+  size: 224
+  overlap: 0.50
+  scales: [1.0] # Add e.g. 0.75 or 1.25 for optional multi-scale extraction.
+  cover_edges: true
+roi:
+  # Optional manual ROI: relative image path -> [left, top, width, height].
+  # Example: references/component_A/photo_01.jpg: [80, 30, 2000, 1400]
+  references: {}
+  queries: {}
+roi_file: configs/rois.yaml # Persistent selections made by scripts/select_rois.py
+aggregation:
+  method: top_k_mean # max or top_k_mean
+  top_k: 3

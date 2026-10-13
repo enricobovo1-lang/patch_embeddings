@@ -1,0 +1,37 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Downloaded models and framework caches
+models/huggingface/
+models/checkpoints/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Local data and experimental artifacts (directory placeholders remain tracked)
+data/input/references/**/*.jpg
+data/input/references/**/*.jpeg
+data/input/references/**/*.png
+data/input/references/**/*.heic
+data/input/queries/**/*.jpg
+data/input/queries/**/*.jpeg
+data/input/queries/**/*.png
+data/input/queries/**/*.heic
+data/wip/patches/**/*
+!data/wip/patches/**/.gitkeep
+data/wip/embeddings/**/*
+!data/wip/embeddings/**/.gitkeep
+data/outputs/predictions/**/*
+!data/outputs/predictions/**/.gitkeep
+data/outputs/evaluations/**/*
+!data/outputs/evaluations/**/.gitkeep
+
+*.log
+.DS_Store
+Thumbs.db

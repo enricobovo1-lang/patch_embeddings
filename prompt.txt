@@ -1,0 +1,391 @@
+# TASK: Creazione progetto Git locale — CIRCE DINOv2 Experiment
+
+## 1. Contesto e obiettivo
+
+Voglio costruire un progetto Python locale, versionato con Git, per condurre un primo esperimento di visual matching utilizzando DINOv2 pre-trained in modalità frozen.
+
+Il progetto è un proof of concept del Livello 1 della strategia CIRCE per l'attribuzione di frammenti al componente di origine.
+
+L'esperimento utilizza tre oggetti presenti sulla mia scrivania:
+
+- `component_A`: tappetino per mouse
+- `component_B`: tappetino da scrivania con pattern simil-persiano
+- `component_C`: copertina di un quaderno
+
+Le immagini saranno acquisite con iPhone e copiate manualmente nelle cartelle di progetto.
+
+**Task fondamentale:** data una fotografia contenente soltanto una porzione di uno dei tre oggetti, identificare il componente di origine confrontando l'embedding della porzione con gli embedding delle patch estratte dalle fotografie degli oggetti integri.
+
+Non voglio addestrare un classificatore supervisionato né effettuare fine-tuning.
+
+Il sistema deve utilizzare:
+
+- DINOv2 ViT-S/14 pre-trained.
+- Encoder completamente frozen, in modalità evaluation/inference.
+- Feature bank contenente molti embedding locali per ciascun componente.
+- Cosine similarity.
+- Aggregazione degli score per componente.
+- Predizione Top-1.
+- Visualizzazione delle patch di riferimento più simili alla query.
+
+## 2. Ambiente di sviluppo e setup
+
+Lavorerò su Windows, utilizzando VS Code, terminale PowerShell e Python.
+
+Prima di procedere:
+
+1. Ispeziona il folder di lavoro corrente.
+2. Verifica la disponibilità di Python, Git, pip ed eventuale GPU NVIDIA.
+3. Controlla le versioni installate e la compatibilità delle dipendenze.
+4. Non modificare progetti o ambienti Python esterni alla cartella corrente.
+5. Se il folder corrente è la root prevista del progetto, utilizza direttamente quello senza creare directory annidate inutili.
+
+### Setup richiesto
+
+- Inizializza un repository Git locale, se non esiste già.
+- Crea un virtual environment locale `.venv`.
+- Installa tutte le librerie necessarie.
+- Installa PyTorch con supporto CUDA soltanto se disponibile e compatibile con l'hardware.
+- In caso contrario, prevedi funzionamento CPU.
+- Installa il necessario per eseguire DINOv2 tramite una modalità di caricamento ufficiale e mantenuta, preferibilmente PyTorch Hub o Hugging Face Transformers, scegliendo una sola implementazione per evitare incompatibilità.
+- Scarica automaticamente i pesi pre-trained del modello al primo utilizzo.
+- Gestisci una cache locale dei pesi; non includere i checkpoint in Git.
+- Genera `requirements.txt` coerente con l'ambiente funzionante.
+- Predisponi `.gitignore`, README e configurazione del progetto.
+- Verifica esplicitamente che il modello venga caricato correttamente e che produca un embedding con dimensionalità attesa.
+
+Non assumere a priori che CUDA sia disponibile.
+
+Non installare il CUDA Toolkit completo se non necessario.
+
+Se incontri un problema di compatibilità o una dipendenza impossibile da risolvere, documentalo e proponi la soluzione corretta. Non dichiarare riuscita un'installazione che non hai verificato.
+
+## 3. Struttura del progetto
+
+Organizza il repository secondo questa struttura logica:
+
+```text
+CIRCE_DINOv2_Experiment/
+│
+├── data/
+│   ├── input/
+│   │   ├── references/
+│   │   │   ├── component_A/
+│   │   │   ├── component_B/
+│   │   │   └── component_C/
+│   │   └── queries/
+│   │       ├── component_A/
+│   │       ├── component_B/
+│   │       └── component_C/
+│   │
+│   ├── wip/
+│   │   ├── patches/
+│   │   │   ├── component_A/
+│   │   │   ├── component_B/
+│   │   │   └── component_C/
+│   │   └── embeddings/
+│   │
+│   └── outputs/
+│       ├── predictions/
+│       └── evaluations/
+│
+├── src/
+├── scripts/
+├── configs/
+├── models/
+├── README.md
+├── requirements.txt
+└── .gitignore
+```
+
+Aggiungi moduli Python e altri file solamente quando servono realmente.
+
+Mantieni una struttura semplice e leggibile, senza introdurre infrastrutture software superflue.
+
+Le directory vuote necessarie devono essere mantenute nel repository tramite `.gitkeep` o meccanismo equivalente.
+
+Le immagini, gli embedding, i checkpoint, la cache e i risultati intermedi devono essere esclusi da Git per impostazione predefinita.
+
+## 4. Pipeline A — Creazione della feature bank
+
+Realizza uno script indipendente eseguibile da VS Code, ad esempio:
+
+`scripts/01_build_feature_bank.py`
+
+### Input
+
+Fotografie degli oggetti integri contenute in:
+
+`data/input/references/component_X/`
+
+Supporta almeno JPG, JPEG e PNG. Prevedi anche HEIC se il supporto può essere aggiunto in modo affidabile; altrimenti documenta la conversione necessaria.
+
+### Funzionalità
+
+1. Carica le fotografie presenti nelle tre cartelle.
+2. Correggi l'orientamento EXIF, se necessario.
+3. Applica un preprocessing deterministico.
+4. Consenti il ritaglio di una ROI dell'oggetto, definita manualmente o tramite coordinate, per evitare che lo sfondo della scrivania domini le feature.
+5. Non introdurre segmentazione automatica mediante altri modelli.
+6. Genera automaticamente numerose patch mediante sliding window.
+7. Permetti di configurare dimensione e overlap delle patch.
+8. Prevedi almeno una modalità di estrazione multi-scala opzionale.
+9. Evita di generare patch incompiute ai bordi senza una regola esplicita.
+10. Salva le patch nelle rispettive cartelle `data/wip/patches/component_X/`.
+
+### Feature extraction
+
+Per ogni patch:
+
+1. Applica il preprocessing ufficiale associato al checkpoint DINOv2 scelto.
+2. Esegui inference con il modello frozen.
+3. Estrai un embedding globale della patch, ad esempio il CLS token secondo l'implementazione prescelta.
+4. Normalizza il vettore mediante norma L2.
+5. Salva l'embedding e i relativi metadati.
+
+Ogni embedding deve essere collegato a:
+
+- `component_id`
+- `source_image`
+- `patch_id`
+- `patch_path`
+- Coordinate della patch nella fotografia originale
+- Dimensioni della patch
+- Scala utilizzata
+- Identificativo del modello e preprocessing
+
+Memorizza la feature bank in un formato semplice e facilmente ricaricabile, ad esempio NumPy NPZ più CSV/JSON dei metadati.
+
+Garantisci l'allineamento tra righe della matrice degli embedding e metadati.
+
+### Output
+
+- Patch visibili nelle sottocartelle.
+- Feature bank persistente.
+- Report con numero di immagini, numero di patch e numero di embedding per componente.
+- Log delle eventuali immagini non valide.
+
+La feature bank deve poter essere ricostruita su richiesta.
+
+## 5. Pipeline B — Inferenza su una nuova query
+
+Realizza uno script indipendente, ad esempio:
+
+`scripts/02_match_queries.py`
+
+### Input
+
+Immagini presenti in:
+
+`data/input/queries/component_X/`
+
+Per il primo esperimento, ogni immagine di query conterrà una porzione dell'oggetto di origine.
+
+Non è necessario implementare un algoritmo di object detection o segmentation.
+
+Prevedi la possibilità di applicare una ROI manuale anche alla query, per escludere il background.
+
+### Elaborazione
+
+Per ogni query:
+
+1. Carica l'immagine.
+2. Applica il preprocessing coerente con quello della feature bank.
+3. Calcola l'embedding mediante lo stesso checkpoint DINOv2.
+4. Normalizza l'embedding L2.
+5. Confrontalo con tutti gli embedding della feature bank mediante cosine similarity.
+6. Ordina le patch per similarità.
+7. Aggrega i risultati separatamente per componente.
+
+Implementa almeno due strategie di aggregazione:
+
+- Massima cosine similarity per componente.
+- Media delle migliori K cosine similarity per componente.
+
+Rendi K configurabile, con valore iniziale 3.
+
+Gestisci correttamente i casi in cui un componente contenga meno di K patch.
+
+### Decisione
+
+Restituisci:
+
+- Componente predetto.
+- Score aggregato per ciascuno dei tre componenti.
+- Componente Top-1 e Top-2.
+- Margine tra Top-1 e Top-2.
+- Identificativo della patch più simile per ciascun componente.
+
+Non introdurre inizialmente threshold arbitrarie per classificare una query come dubbia. Prevedi però una struttura del codice che consenta di aggiungerle in futuro.
+
+Non trattare gli score cosine come probabilità calibrate.
+
+## 6. Visualizzazione dei risultati
+
+Per ogni query genera una rappresentazione visiva che mostri:
+
+- Immagine della query.
+- Componente predetto.
+- Ground truth, se disponibile.
+- Score dei tre componenti.
+- Le migliori tre patch della feature bank, ordinate per cosine similarity.
+- Nome del componente e score di ciascuna patch.
+
+Salva una figura PNG nella cartella:
+
+`data/outputs/predictions/`
+
+La visualizzazione deve aiutarmi a capire se il matching è basato su caratteristiche visive effettivamente corrispondenti.
+
+In particolare voglio poter osservare la migliore patch identificata sul componente corretto e confrontarla visivamente con la query.
+
+## 7. Pipeline C — Valutazione sperimentale
+
+Realizza un terzo script eseguibile, ad esempio:
+
+`scripts/03_evaluate.py`
+
+Le cartelle delle query rappresentano anche la ground truth:
+
+- `queries/component_A/` → A
+- `queries/component_B/` → B
+- `queries/component_C/` → C
+
+Prevedi idealmente 10 query indipendenti per ciascun componente, ma non imporre un numero fisso.
+
+Calcola:
+
+1. Top-1 accuracy complessiva.
+2. Accuracy per componente.
+3. Confusion matrix.
+4. Distribuzione degli score del componente corretto.
+5. Distribuzione degli score dei componenti errati.
+6. Distribuzione dei margini Top-1/Top-2.
+
+Salva:
+
+- CSV completo delle predizioni.
+- CSV delle metriche.
+- Confusion matrix come immagine.
+- Grafici delle distribuzioni degli score.
+
+Conserva i risultati separatamente per strategia di aggregazione, così da confrontare `max` e `top_k_mean`.
+
+Non utilizzare le immagini di query per costruire la feature bank.
+
+## 8. Configurazione degli esperimenti
+
+Crea un file di configurazione YAML con i parametri modificabili:
+
+- Model ID / checkpoint DINOv2.
+- Device: auto, CPU o CUDA.
+- Batch size.
+- Patch size.
+- Sliding window stride o overlap.
+- Eventuali scale aggiuntive.
+- Dimensione K dell'aggregazione.
+- Metodologia di aggregazione.
+- Percorsi delle directory.
+- Parametri di preprocessing ove applicabili.
+
+Non inserire valori numerici direttamente in più script quando possono essere centralizzati.
+
+Come primo default per l'estrazione delle patch considera 224 × 224 pixel e overlap del 50%, specificando che si tratta di valori sperimentali modificabili.
+
+Assicurati di non confondere la dimensione del crop nell'immagine originale con la risoluzione di input effettiva utilizzata da DINOv2.
+
+## 9. Gestione Git e riproducibilità
+
+Predisponi un `.gitignore` che escluda almeno:
+
+- `.venv/`
+- `__pycache__/`
+- Cache Python e framework.
+- Checkpoint e pesi del modello.
+- Fotografie originali.
+- Patch estratte.
+- Embedding generati.
+- File temporanei e output sperimentali voluminosi.
+
+Versiona codice, configurazioni, requirements e documentazione.
+
+Non versionare il modello pre-trained né i dati acquisiti con iPhone.
+
+Prevedi logging essenziale e messaggi di errore chiari.
+
+Se Git non è configurato con nome ed email, non inventare credenziali né modificare la configurazione globale.
+
+## 10. Testing e validazione
+
+Poiché non ho ancora caricato le fotografie degli oggetti, non inventare dati reali né simulare risultati di matching come se fossero sperimentali.
+
+Verifica comunque:
+
+- Import delle librerie.
+- Download/caricamento del checkpoint.
+- Disponibilità e selezione del device.
+- Dimensione degli embedding.
+- Normalizzazione L2.
+- Corretto calcolo della cosine similarity.
+- Salvataggio e ricaricamento della feature bank.
+- Ordinamento degli score e correttezza dell'aggregazione.
+- Funzionamento dei percorsi relativi alla root del repository.
+
+Per i test unitari puoi utilizzare vettori numerici sintetici e immagini artificiali chiaramente identificate come tali.
+
+Se possibile, effettua uno smoke test end-to-end con dati sintetici in una directory temporanea, senza confonderlo con la validazione sperimentale.
+
+## 11. README e guida operativa
+
+Scrivi un README in italiano che includa:
+
+1. Obiettivo dell'esperimento.
+2. Descrizione di DINOv2 frozen e del matching mediante embedding.
+3. Prerequisiti hardware/software.
+4. Installazione dell'ambiente.
+5. Posizionamento delle fotografie nei folder corretti.
+6. Creazione della feature bank.
+7. Inferenza sulle nuove immagini.
+8. Valutazione delle predizioni.
+9. Descrizione degli output.
+10. Parametri modificabili e relativo significato.
+11. Come rieseguire l'esperimento dopo aver modificato il dataset.
+
+Gli script devono essere facilmente eseguibili da VS Code.
+
+Fornisci i comandi PowerShell necessari all'esecuzione di ogni fase.
+
+## 12. Modalità operativa richiesta a Codex
+
+Procedi direttamente alla realizzazione del progetto, senza fermarti alla sola descrizione dell'architettura.
+
+Organizza il lavoro in questa sequenza:
+
+**Step 1:** ispezione dell'ambiente e creazione della struttura del repository.
+
+**Step 2:** creazione del virtual environment, installazione delle dipendenze e download/verifica di DINOv2.
+
+**Step 3:** implementazione della feature bank.
+
+**Step 4:** implementazione dell'inferenza e delle visualizzazioni.
+
+**Step 5:** implementazione della valutazione.
+
+**Step 6:** test e aggiornamento della documentazione.
+
+**Step 7:** riepilogo finale.
+
+Al termine, forniscimi:
+
+- Struttura finale del repository.
+- File Python creati e loro responsabilità.
+- Dipendenze installate.
+- Modello DINOv2 effettivamente utilizzato.
+- Device rilevato.
+- Test eseguiti e relativo esito.
+- Eventuali limitazioni o operazioni rimaste incomplete.
+- Comandi esatti per utilizzare il progetto una volta inserite le fotografie.
+
+Non implementare Livello 2, fine-tuning, contrastive learning, Siamese Network, training supervisionato o interfacce web.
+
+**Priorità: ottenere una baseline Livello 1 funzionante, verificabile e comprensibile, mantenendo il progetto semplice.**

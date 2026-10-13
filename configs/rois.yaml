@@ -1,0 +1,124 @@
+# Managed by scripts/select_rois.py. Coordinates are [left, top, width, height].
+roi:
+  references:
+    component_A/IMG_3733.jpg:
+    - 466
+    - 570
+    - 1711
+    - 3111
+    component_A/IMG_3734.jpg:
+    - 598
+    - 585
+    - 1939
+    - 3157
+    component_A/IMG_3735.jpg:
+    - 210
+    - 426
+    - 2347
+    - 3340
+    component_A/IMG_3736.jpg:
+    - 470
+    - 752
+    - 1683
+    - 2746
+    component_A/IMG_3737.jpg:
+    - 610
+    - 1353
+    - 1361
+    - 2153
+    component_A/IMG_3739.jpg:
+    - 334
+    - 287
+    - 2265
+    - 3409
+    component_A/IMG_3740.jpg:
+    - 1095
+    - 1062
+    - 1520
+    - 1462
+    component_A/IMG_3741.jpg:
+    - 617
+    - 702
+    - 834
+    - 2987
+    component_B/IMG_3742.jpg:
+    - 28
+    - 686
+    - 2762
+    - 3181
+    component_B/IMG_3743.jpg:
+    - 350
+    - 515
+    - 2087
+    - 3274
+    component_B/IMG_3744.jpg:
+    - 396
+    - 1186
+    - 1784
+    - 2091
+    component_B/IMG_3746.jpg:
+    - 708
+    - 477
+    - 3028
+    - 2054
+    component_B/IMG_3747.jpg:
+    - 319
+    - 1256
+    - 2521
+    - 1474
+    component_B/IMG_3748.jpg:
+    - 420
+    - 930
+    - 2001
+    - 2789
+    component_B/IMG_3749.jpg:
+    - 633
+    - 698
+    - 1986
+    - 2839
+    component_B/IMG_3750.jpg:
+    - 687
+    - 1458
+    - 1524
+    - 1617
+    component_C/IMG_3751.jpg:
+    - 237
+    - 705
+    - 2680
+    - 3072
+    component_C/IMG_3753.jpg:
+    - 1
+    - 915
+    - 2897
+    - 2634
+    component_C/IMG_3754.jpg:
+    - 532
+    - 27
+    - 2071
+    - 3126
+    component_C/IMG_3755.jpg:
+    - 761
+    - 1512
+    - 1458
+    - 1800
+    component_C/IMG_3756.jpg:
+    - 447
+    - 1442
+    - 2009
+    - 2168
+    component_C/IMG_3757.jpg:
+    - 470
+    - 973
+    - 1912
+    - 2385
+    component_C/IMG_3758.jpg:
+    - 382
+    - 285
+    - 2991
+    - 2193
+    component_C/IMG_3759.jpg:
+    - 206
+    - 1268
+    - 2226
+    - 1901
+  queries: {}
